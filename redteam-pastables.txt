@@ -1140,8 +1140,9 @@ john --show hashes.file
 hashcat (GPU based, more active dev) 
 hashcat -a=ATTACKMODE -m 5600(HASHTYPE value) -I CHARSETMASK(a,I,u,d,h,H,etc)
 
-example on windows:
-.\hashcat64.exe --hash-type=1800 --attack-mode=0 --workload-profile=3 --optimized-kernel-enable --outfile=71.cracked unshadow.71 rockyou.txt
+examples on windows:
+.\hashcat64.exe --hash-type=1800 --attack-mode=0 --workload-profile=3 --optimized-kernel-enable --outfile=71.cracked unshadow.71 rockyou.txt     #windows, cracking linux hash, sha512 $6$ 
+.\hashcat64.exe --hash-type=0 --attack-mode=3 --custom-charset1=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 --increment --workload-profile=3 --optimized-kernel-enable --outfile=lookover.txt md5.txt ?1?1?1?1?1?1?1?1?1?1?1?1?1?1?1     #windows, cracking md5 hash of unknown length (increments starting with length 1 and goes up), with alphanumeric (no symbols or special characters)
 
 
 ophcrack      (for Windows)
